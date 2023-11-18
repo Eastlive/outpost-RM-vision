@@ -188,7 +188,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   static_offset_pitch_ = this->declare_parameter("trajectory.static_offset.pitch", 0.0);
 
   //Get fire angle thres
-  yaw_angle_thres = this->declare_parameter("yaw_angle_thres", 25.0);
+  yaw_angle_thres = this->declare_parameter("yaw_angle_thres", 5.0);
   fire_permit_thres = this->declare_parameter("fire_permit_thres", 1.5);
   fire_latency = this->declare_parameter("fire_latency", 0.02);
 
@@ -322,67 +322,17 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 
   if (target_msg.tracking == true) {
 
-    //save target states
-    Eigen::Vector3d now_car_pos = Eigen::Vector3d(
+    Eigen::Vector3d now_outpost_pos = Eigen::Vector3d(
       target_msg.position.x,
       target_msg.position.y,
       target_msg.position.z);
-    double armor_yaw = target_msg.yaw;
-    double car_w = target_msg.v_yaw;
+    auto outpost_center_diff = calcYawAndPitch(now_outpost_pos);
 
-    if (tracker_debug_) {
-      RCLCPP_INFO(get_logger(), "distance : %lf", (now_car_pos.norm() - outpost_radius_));
-      RCLCPP_INFO(get_logger(), "speed : %lf", trajectory_slover_->getBulletSpeed());
-    }
-    //save the pred target
-    double pred_dt =
-      fire_latency + latency_ / 1000 + (now_car_pos.norm() - outpost_radius_) /
-      trajectory_slover_->getBulletSpeed();
+    Eigen::Vector3d armor_target = Eigen::Vector3d(
+      now_outpost_pos[0] - outpost_radius_ * cos(outpost_center_diff[0]),
+      now_outpost_pos[1] - outpost_radius_ * sin(outpost_center_diff[0]),
+      now_outpost_pos[2]);
 
-    if (tracker_debug_) {
-      RCLCPP_INFO(get_logger(), "latency : %lf", latency_ / 1000.0);
-    }
-    Eigen::Vector3d pred_car_pos = now_car_pos;
-    double pred_yaw = armor_yaw + car_w * pred_dt;
-    auto car_center_diff = calcYawAndPitch(pred_car_pos);
-
-    Eigen::Vector3d armor_target_min_dis, armor_target, pred_armor_pos;
-    double min_dis_yaw;
-    size_t a_n = 3;
-    double min_distance_armor = DBL_MAX;
-    double r = 0;
-    for (size_t i = 0; i < a_n; i++) {
-      double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
-      r = outpost_radius_;
-      pred_armor_pos[2] = pred_car_pos[2];
-      pred_armor_pos[0] = pred_car_pos[0] - r * cos(tmp_yaw);
-      pred_armor_pos[1] = pred_car_pos[1] - r * sin(tmp_yaw);
-
-      //get armor yaw
-      double a_yaw = tmp_yaw;
-      if (a_yaw >= M_PI) {
-        a_yaw -= 2.0 * M_PI;
-      }
-
-      //get minimum distance target
-      double armor_distance = pred_armor_pos.norm();
-      if (armor_distance < min_distance_armor) {
-        min_distance_armor = armor_distance;
-        armor_target_min_dis = pred_armor_pos;
-        //min_distance_target_num = i;
-        min_dis_yaw = a_yaw;
-      }
-    }
-
-    //tracked permit
-    armor_target = armor_target_min_dis;
-    auto a2c_yaw_diff = fabs(min_dis_yaw - car_center_diff[0]);
-    bool tracked_permit = 0;
-    if (rad2deg(a2c_yaw_diff) < yaw_angle_thres) {
-      tracked_permit = 1;
-    }
-
-    //Transform world frame to pitch frame
     geometry_msgs::msg::Vector3Stamped point_target, armor_target_tf;
     point_target.vector.x = armor_target(0);
     point_target.vector.y = armor_target(1);
@@ -393,34 +343,31 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     armor_target_pitch_link(1) = armor_target_tf.vector.y;
     armor_target_pitch_link(2) = armor_target_tf.vector.z;
 
-    //Get offset
     Eigen::Vector2d angel_diff = calcYawAndPitch(armor_target_pitch_link);
     auto trajectory_pitch = (-trajectory_slover_->calcPitchCompensate(armor_target));
     auto trajectory_view = trajectory_slover_->getTrajectoryWorld();
 
-    //Set fire permit
-    int8_t fire_permit = 0;
-    if (fabs(angel_diff[0]) < fire_permit_thres && tracked_permit) {
-      fire_permit = 1;
-    }
-
-    target_msg.fire_permit = fire_permit;
     target_msg.offset_yaw = rad2deg((double)angel_diff(0)) + static_offset_yaw_;
     target_msg.offset_pitch = rad2deg((double)angel_diff(1)) + trajectory_pitch +
       static_offset_pitch_;
 
+    double outpost_yaw = target_msg.yaw;
+    double outpost_w = target_msg.v_yaw;
+    double pred_dt =
+      fire_latency + latency_ / 1000 + (now_outpost_pos.norm() - outpost_radius_) /
+      trajectory_slover_->getBulletSpeed();
+    double pred_yaw = outpost_yaw + outpost_w * pred_dt;
 
-    if (tracker_debug_) {
-      RCLCPP_INFO(this->get_logger(), "trajectory_pitch : %lf", trajectory_pitch);
-      RCLCPP_INFO(
-        this->get_logger(), "offset_pitch : %lf , offset_yaw : %lf", target_msg.offset_pitch,
-        target_msg.offset_yaw);
-
-      //RCLCPP_INFO(this->get_logger(), "yaw_angle_thres : %lf", yaw_angle_thres);
-      //RCLCPP_INFO(this->get_logger(), "fire_permit_thres : %lf", fire_permit_thres);
-      //RCLCPP_INFO(this->get_logger(), "fire_latency : %lf", fire_latency);
-      RCLCPP_INFO(this->get_logger(), "fire_permit : %d", fire_permit);
+    int8_t fire_permit = 0;
+    double permit_yaw_angle = atan(1.35 / 2 / outpost_radius_);
+    double permit_scale = 0.6;
+    if (abs(pred_yaw - gimbal_yaw) < permit_yaw_angle * permit_scale) {
+      fire_permit = 1;
+    } else {
+      fire_permit = 0;
     }
+
+    target_msg.fire_permit = fire_permit;
 
     if (!(isnan(target_msg.offset_yaw) || isnan(target_msg.offset_pitch))) {
       target_pub_->publish(target_msg);
