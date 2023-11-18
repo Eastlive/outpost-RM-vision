@@ -1,0 +1,32 @@
+/armor_detector:
+  ros__parameters:
+    detect_color: 0 # 0 red
+
+/armor_tracker:
+  ros__parameters:
+    target_frame: gimbal_odom
+    max_armor_distance: 10.0
+
+    ekf:
+      sigma2_q_xyz: 0.01
+      sigma2_q_yaw: 10.0
+
+      r_xyz_factor: 1e-4
+      r_yaw: 5e-3
+
+    tracker:
+      max_match_distance: 0.7
+      max_match_yaw_diff: 1.0
+
+      tracking_thres: 2
+      lost_time_thres: 5.0
+
+    trajectory:
+      max_iter : 10 
+      stop_error : 0.001
+      R_K_iter : 50
+      init_bullet_speed : 26.5
+      is_hero: true
+      static_offset:
+        yaw : 0.5
+        pitch : 0.0
