@@ -1,14 +1,14 @@
-// Copyright 2022 Chen Jun
-#include "armor_tracker/tracker_node.hpp"
+// Copyright 2023 Chen Tingxu
+#include "outpost_tracker/tracker_node.hpp"
 
 // STD
 #include <memory>
 #include <vector>
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
-: Node("armor_tracker", options)
+: Node("outpost_tracker", options)
 {
   RCLCPP_INFO(this->get_logger(), "Starting TrackerNode!");
 
@@ -549,11 +549,11 @@ void ArmorTrackerNode::publishMarkers(
   marker_pub_->publish(marker_array);
 }
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
 #include "rclcpp_components/register_node_macro.hpp"
 
 // Register the component with class_loader.
 // This acts as a sort of entry point, allowing the component to be discoverable when its library
 // is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(rm_auto_aim::ArmorTrackerNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(outpost_auto_aim::ArmorTrackerNode)

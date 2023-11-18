@@ -1,6 +1,8 @@
-#include "armor_tracker/trajectory_slover.hpp"
+// Copyright 2023 Chen Tingxu
 
-namespace rm_auto_aim
+#include "outpost_tracker/trajectory_slover.hpp"
+
+namespace outpost_auto_aim
 {
 /**
      * @brief constructor ,init param from yaml
@@ -118,4 +120,4 @@ double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
   return pitch_new - pitch;
 }
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim

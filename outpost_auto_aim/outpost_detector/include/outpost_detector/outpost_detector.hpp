@@ -10,7 +10,7 @@
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include <visualization_msgs/msg/marker_array.hpp>
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 
 class OutpostDetectorNode : public rclcpp::Node
@@ -51,6 +51,6 @@ private:
   double dt_;
 };
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
 #endif  // OUTPOST_DETECTOR__OUTPOST_DETECTOR_NODE_HPP_

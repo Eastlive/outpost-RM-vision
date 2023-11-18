@@ -1,7 +1,7 @@
-// Copyright 2022 Chen Jun
+// Copyright 2023 Chen Tingxu
 
-#ifndef ARMOR_PROCESSOR__PROCESSOR_NODE_HPP_
-#define ARMOR_PROCESSOR__PROCESSOR_NODE_HPP_
+#ifndef OUTPOST_TRACKER__PROCESSOR_NODE_HPP_
+#define OUTPOST_TRACKER__PROCESSOR_NODE_HPP_
 
 // ROS
 #include <message_filters/subscriber.h>
@@ -23,14 +23,13 @@
 #include <string>
 #include <vector>
 
-#include "armor_tracker/tracker.hpp"
+#include "outpost_tracker/tracker.hpp"
 #include "auto_aim_interfaces/msg/armors.hpp"
-#include "auto_aim_interfaces/msg/target.hpp"
 #include "auto_aim_interfaces/msg/tracker_info.hpp"
 #include "auto_aim_interfaces/msg/target_outpost.hpp"
 #include "std_msgs/msg/float64.hpp"
-#include "armor_tracker/trajectory_slover.hpp"
-namespace rm_auto_aim
+#include "outpost_tracker/trajectory_slover.hpp"
+namespace outpost_auto_aim
 {
 using tf2_filter = tf2_ros::MessageFilter<auto_aim_interfaces::msg::Armors>;
 class ArmorTrackerNode : public rclcpp::Node
@@ -121,6 +120,6 @@ private:
   bool tracker_debug_;
 };
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
-#endif  // ARMOR_PROCESSOR__PROCESSOR_NODE_HPP_
+#endif  // OUTPOST_TRACKER__PROCESSOR_NODE_HPP_

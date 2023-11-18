@@ -1,8 +1,8 @@
-// Copyright 2022 Chen Jun
+// Copyright 2023 Chen Tingxu
 
-#include "armor_tracker/extended_kalman_filter.hpp"
+#include "outpost_tracker/extended_kalman_filter.hpp"
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 ExtendedKalmanFilter::ExtendedKalmanFilter(
   const VecVecFunc & f, const VecVecFunc & h, const VecMatFunc & j_f, const VecMatFunc & j_h,
@@ -48,4 +48,4 @@ Eigen::MatrixXd ExtendedKalmanFilter::update(const Eigen::VectorXd & z)
   return x_post;
 }
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim

@@ -1,7 +1,7 @@
-// Copyright 2022 Chen Jun
+// Copyright 2023 Chen Tingxu
 
-#ifndef ARMOR_PROCESSOR__TRACKER_HPP_
-#define ARMOR_PROCESSOR__TRACKER_HPP_
+#ifndef OUTPOST_TRACKER__TRACKER_HPP_
+#define OUTPOST_TRACKER__TRACKER_HPP_
 
 // Eigen
 #include <Eigen/Eigen>
@@ -15,11 +15,10 @@
 #include <memory>
 #include <string>
 
-#include "armor_tracker/extended_kalman_filter.hpp"
+#include "outpost_tracker/extended_kalman_filter.hpp"
 #include "auto_aim_interfaces/msg/armors.hpp"
-#include "auto_aim_interfaces/msg/target.hpp"
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 
 enum class ArmorsNum { NORMAL_4 = 4, BALANCE_2 = 2, OUTPOST_3 = 3 };
@@ -82,6 +81,6 @@ private:
   double last_yaw_;
 };
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
-#endif  // ARMOR_PROCESSOR__TRACKER_HPP_
+#endif  // OUTPOST_TRACKER__TRACKER_HPP_

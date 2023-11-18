@@ -1,12 +1,12 @@
-// Copyright 2022 Chen Jun
+// Copyright 2023 Chen Tingxu
 
-#ifndef ARMOR_PROCESSOR__KALMAN_FILTER_HPP_
-#define ARMOR_PROCESSOR__KALMAN_FILTER_HPP_
+#ifndef OUTPOST_TRACKER__KALMAN_FILTER_HPP_
+#define OUTPOST_TRACKER__KALMAN_FILTER_HPP_
 
 #include <Eigen/Dense>
 #include <functional>
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 
 class ExtendedKalmanFilter
@@ -69,6 +69,6 @@ private:
   Eigen::VectorXd x_post;
 };
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
-#endif  // ARMOR_PROCESSOR__KALMAN_FILTER_HPP_
+#endif  // OUTPOST_TRACKER__KALMAN_FILTER_HPP_

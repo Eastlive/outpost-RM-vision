@@ -15,7 +15,7 @@ Eigen::Quaterniond eulerToQuaternion(double roll, double pitch, double yaw)
   return q;
 }
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 
 OutpostDetectorNode::OutpostDetectorNode(const rclcpp::NodeOptions & options)
@@ -203,7 +203,7 @@ void OutpostDetectorNode::publishMarkers()
   marker_pub_->publish(marker_array_);
 }
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(rm_auto_aim::OutpostDetectorNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(outpost_auto_aim::OutpostDetectorNode)

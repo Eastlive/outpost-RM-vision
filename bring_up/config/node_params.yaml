@@ -1,0 +1,65 @@
+/virtual_serial_driver:
+  ros__parameters:
+    bullet_speed: 16.0
+    enemy_color: 82
+    pitch_joint: 0.0
+    yaw_joint: 0.0
+
+/virtual_outpost:
+  ros__parameters:
+    outpost_x: 0.0
+    outpost_y: -1.0
+    outpost_z: 5.5
+    orientation_x: 0.56098552679693100
+    orientation_y: -0.56098552679693100
+    orientation_z: 0.43045933457687941
+    orientation_w: 0.43045933457687941
+
+/armor_detector:
+  ros__parameters:
+    debug: true
+
+    binary_thres: 80
+
+    light.min_ratio: 0.1
+    armor.min_light_ratio: 0.8
+
+    classifier_threshold: 0.8
+    ignore_classes: ["negative"]
+
+/outpost_tracker:
+  ros__parameters:
+    target_frame: gimbal_odom
+    max_armor_distance: 10.0
+
+    yaw_angle_thres: 25.0
+    fire_permit_thres: 1.5
+    fire_latency: 0.03
+    min_speed: 12.0
+
+    debug: false
+
+    ekf:
+      sigma2_q_xyz: 0.05
+      sigma2_q_yaw: 5.0
+      sigma2_q_r: 80.0
+
+      r_xyz_factor: 0.0004
+      r_yaw: 0.005
+
+    tracker:
+      max_match_distance: 0.5
+      max_match_yaw_diff: 1.0
+
+      tracking_thres: 5
+      lost_time_thres: 4.0
+
+    trajectory:
+      max_iter : 10 
+      stop_error : 0.001
+      R_K_iter : 50
+      init_bullet_speed : 16.0
+      is_hero: true
+      static_offset:
+        yaw : 0.0
+        pitch : 0.0

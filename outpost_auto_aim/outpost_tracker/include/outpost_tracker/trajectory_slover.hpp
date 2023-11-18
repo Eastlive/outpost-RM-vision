@@ -1,5 +1,7 @@
-#ifndef SCURM23_AUTOAIM_TRAJECTORYSLOVER_HPP
-#define SCURM23_AUTOAIM_TRAJECTORYSLOVER_HPP
+// Copyright 2023 Chen Tingxu
+
+#ifndef OUTPOST_TRACKER__TRAJECTORY_SLOVER_HPP
+#define OUTPOST_TRACKER__TRAJECTORY_SLOVER_HPP
 
 //c++
 #include <iostream>
@@ -10,7 +12,7 @@
 
 #include <Eigen/Dense>
 #define PI 3.1415926535897932384626433832795
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 
 class TrajectorySlover
@@ -48,6 +50,6 @@ private:
   const double K_BIG = 0.005300;  //big bullet
 };
 
-}  // namespace rm_auto_aim
+}  // namespace outpost_auto_aim
 
-#endif  //SCURM23_AUTOAIM_TRAJECTORYSLOVER_HPP
+#endif  //OUTPOST_TRACKER__TRAJECTORY_SLOVER_HPP

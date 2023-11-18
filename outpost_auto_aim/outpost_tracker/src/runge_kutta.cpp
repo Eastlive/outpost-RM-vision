@@ -1,6 +1,8 @@
-#include "armor_tracker/runge_kutta.hpp"
+// Copyright 2023 Chen Tingxu
 
-namespace rm_auto_aim
+#include "outpost_tracker/runge_kutta.hpp"
+
+namespace outpost_auto_aim
 {
 RungeKutta4::RungeKutta4(double step)
 {
@@ -34,7 +36,7 @@ std::vector<double> RungeKutta4::solve(
 std::vector<double> RungeKutta4::add(std::vector<double> a, std::vector<double> b)
 {
   std::vector<double> result;
-  for (int i = 0; i < a.size(); i++) {
+  for (size_t i = 0; i < a.size(); i++) {
     result.push_back(a[i] + b[i]);
   }
   return result;
@@ -43,10 +45,10 @@ std::vector<double> RungeKutta4::add(std::vector<double> a, std::vector<double> 
 std::vector<double> RungeKutta4::scale(double scalar, std::vector<double> a)
 {
   std::vector<double> result;
-  for (int i = 0; i < a.size(); i++) {
+  for (size_t i = 0; i < a.size(); i++) {
     result.push_back(scalar * a[i]);
   }
   return result;
 }
 
-} // namespace rm_auto_aim
+} // namespace outpost_auto_aim

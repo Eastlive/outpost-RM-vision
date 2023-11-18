@@ -1,15 +1,15 @@
 // Copyright 2023 Chen Tingxu
 // Licence MIT
 
-#ifndef ARMOR_TRACKER__RUNGE_KUTTA_HPP
-#define ARMOR_TARCKER__RUNGE_KUTTA_HPP
+#ifndef OUTPOST_TRACKER__RUNGE_KUTTA_HPP
+#define OUTPOST_TRACKER__RUNGE_KUTTA_HPP
 
 #include <cmath>
 #include <iostream>
 #include <vector>
 #include <functional>
 
-namespace rm_auto_aim
+namespace outpost_auto_aim
 {
 class RungeKutta4
 {
@@ -19,7 +19,8 @@ public:
   std::vector<double> solve(
     std::function<std::vector<double>(double, std::vector<double>)> f,
     std::vector<double> y0, double x0, double x_end,
-    std::function<bool(std::vector<double>)> stop_condition = [] (std::vector<double> y) {return false;}
+    std::function<bool(std::vector<double>)> stop_condition = [] (__attribute__(
+      (unused)) std::vector<double> y) {return false;}
   );
 
   std::vector<std::pair<double, double>> get_track() const {return track_;}
@@ -40,6 +41,6 @@ private:
 
   std::vector<std::pair<double, double>> track_;
 };
-} // namespace rm_auto_aim
+} // namespace outpost_auto_aim
 
-#endif // ARMOR_TRACKER__RUNGE_KUTTA_HPP
+#endif // OUTPOST_TRACKER__RUNGE_KUTTA_HPP
