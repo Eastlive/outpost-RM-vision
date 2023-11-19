@@ -387,84 +387,37 @@ void ArmorTrackerNode::publishMarkers(
   trajectory_marker_.header = target_msg.header;
 
   visualization_msgs::msg::MarkerArray marker_array;
+
   if (target_msg.tracking) {
-    double yaw = target_msg.yaw;
-    double xc = target_msg.position.x, yc = target_msg.position.y, za = target_msg.position.z;
-    double car_w = target_msg.v_yaw;
-
-    Eigen::Vector3d now_car_pos = Eigen::Vector3d(
-      target_msg.position.x,
-      target_msg.position.y,
-      target_msg.position.z);
-
-    double pred_dt =
-      fire_latency + latency_ / 1000 + (now_car_pos.norm() - outpost_radius_) /
-      trajectory_slover_->getBulletSpeed();
-    double pred_yaw = yaw + car_w * pred_dt;
-    Eigen::Vector3d pred_car_pos = now_car_pos;
-
-
+    // Center of outpost
     position_marker_.action = visualization_msgs::msg::Marker::ADD;
-    position_marker_.pose.position.x = xc;
-    position_marker_.pose.position.y = yc;
-    position_marker_.pose.position.z = za;
+    position_marker_.pose.position.x = target_msg.position.x;
+    position_marker_.pose.position.y = target_msg.position.y;
+    position_marker_.pose.position.z = target_msg.position.z;
 
-
+    // Angular velocity arrow
     angular_v_marker_.action = visualization_msgs::msg::Marker::ADD;
-    angular_v_marker_.points.clear();
-    angular_v_marker_.points.emplace_back(position_marker_.pose.position);
 
     geometry_msgs::msg::Point arrow_end = position_marker_.pose.position;
     arrow_end.z += target_msg.v_yaw / M_PI;
+    angular_v_marker_.points.clear();
+    angular_v_marker_.points.emplace_back(position_marker_.pose.position);
     angular_v_marker_.points.emplace_back(arrow_end);
 
+    // Armor visualization
     armor_marker_.action = visualization_msgs::msg::Marker::ADD;
-    armor_marker_.scale.y = tracker_->tracked_armor.type == "small" ? 0.135 : 0.23;
-    size_t a_n = 3;
-    geometry_msgs::msg::Point p_a;
-    double r = 0;
-    for (size_t i = 0; i < a_n; i++) {
-      double tmp_yaw = yaw + i * (2 * M_PI / a_n);
-      // Only 4 armors has 2 radius and height
-      r = outpost_radius_;
-      p_a.z = za;
-      p_a.x = xc - r * cos(tmp_yaw);
-      p_a.y = yc - r * sin(tmp_yaw);
+    armor_marker_.scale.y = 0.135;
 
+    for (int i = 0; i < 3; i++) {
       armor_marker_.id = i;
-      armor_marker_.pose.position = p_a;
+      double tmp_yaw = target_msg.yaw + i * (2 * M_PI / 3);
+      armor_marker_.pose.position.x = target_msg.position.x - outpost_radius_ * cos(tmp_yaw);
+      armor_marker_.pose.position.y = target_msg.position.y - outpost_radius_ * sin(tmp_yaw);
+      armor_marker_.pose.position.z = target_msg.position.z;
       tf2::Quaternion q;
-      q.setRPY(0, target_msg.id == "outpost" ? -0.26 : 0.26, tmp_yaw);
+      q.setRPY(0, -0.26, tmp_yaw);
       armor_marker_.pose.orientation = tf2::toMsg(q);
       marker_array.markers.emplace_back(armor_marker_);
-    }
-    //pred_armor visualization
-
-    Eigen::Vector3d pred_p_a;
-    geometry_msgs::msg::Point target_p_a;
-    double min_distance_armor = DBL_MAX;
-    r = 0;
-    for (size_t i = 0; i < a_n; i++) {
-      double tmp_yaw = pred_yaw + i * (2 * M_PI / a_n);
-      r = outpost_radius_;
-      pred_p_a[2] = pred_car_pos[2];
-      pred_p_a[0] = pred_car_pos[0] - r * cos(tmp_yaw);
-      pred_p_a[1] = pred_car_pos[1] - r * sin(tmp_yaw);
-
-      //get armor yaw
-      double a_yaw = tmp_yaw;
-      if (a_yaw >= M_PI) {
-        a_yaw -= 2.0 * M_PI;
-      }
-
-      //get minimum distance target
-      double armor_distance = pred_p_a.norm();
-      if (armor_distance < min_distance_armor) {
-        min_distance_armor = armor_distance;
-        target_p_a.x = pred_p_a[0];
-        target_p_a.y = pred_p_a[1];
-        target_p_a.z = pred_p_a[2];
-      }
     }
 
     //trajectory visualization
