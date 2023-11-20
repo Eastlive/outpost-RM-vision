@@ -1,122 +1,95 @@
 // Copyright 2023 Chen Tingxu
 
 #include "outpost_tracker/trajectory_slover.hpp"
+#include "outpost_tracker/runge_kutta.hpp"
+
+#include "rclcpp/rclcpp.hpp"
 
 namespace outpost_auto_aim
 {
-/**
-     * @brief constructor ,init param from yaml
-     * @param coord_path
-     * @param name
-     */
-TrajectorySlover::TrajectorySlover(
-  int max_iter, float stop_error, int R_K_iter, double bullet_speed, bool is_hero)
+TrajectorySlover::TrajectorySlover(int max_iter, double stop_error, double dt, double bullet_speed, double max_dist)
+  : max_iter_(max_iter), stop_error_(stop_error), dt_(dt), bullet_speed_(bullet_speed), max_dist_(max_dist)
 {
-  max_iter_ = max_iter;
-  stop_error_ = stop_error;
-  R_K_iter_ = R_K_iter;
-  bullet_speed_ = bullet_speed;
-  if (is_hero) {
-    k = K_BIG;
-  } else {
-    k = K_SMALL;
-  }
+  runge_kutta_ = std::make_shared<RungeKutta4>(dt_);
 }
 
-/**
-     * #brief trajectory solver get pitch offset
-     * @param point_world
-     * @return pitch offset
-     * @attention 用到的知识：高中斜抛运动+空气阻力。求解方法:四阶龙格库塔法 + 迭代法
-     *             https://zhuanlan.zhihu.com/p/34261490
-     */
-double TrajectorySlover::calcPitchCompensate(Eigen::Vector3d & point_world)
+std::vector<double> TrajectorySlover::func(double x, std::vector<double> y)
 {
-  //初始化
+  (void) x;
+  std::vector<double> result(4);
+  result[0] = y[2] * cos(y[3]);
+  result[1] = y[2] * sin(y[3]);
+  result[2] = -g * sin(y[3]) - k_d * y[2] * y[2];
+  result[3] = -g * cos(y[3]) / y[2] + k_l * y[2];
+  return result;
+}
+
+double TrajectorySlover::solvePitch(Eigen::Vector3d & point_world)
+{
+  RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Solving pitch...");
+  // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "point_world: %f, %f, %f", point_world[0], point_world[1], point_world[2]);
+
   trajectory_.clear();
   trajectory_world_.clear();
-  //TODO:根据陀螺仪安装位置调整距离求解方式
-  //降维，坐标系Y轴以垂直向上为正方向
+  flight_time_ = 0.0;
 
-  // 表示垂直方向上的距离
-  auto dist_vertical = point_world[2];
-
-  auto vertical_tmp = dist_vertical;
-
+  auto h = point_world[2];
+  auto vertical_tmp = h;
   auto theta = atan2(point_world[1], point_world[0]);
-  // 表示水平方向上的距离
-  auto dist_horizonal = sqrt(point_world.squaredNorm() - dist_vertical * dist_vertical); // squaredNorm()表示向量的模的平方
-  // auto dist_horizonal = sqrt(point_world[0] * point_world[0] + point_world[1] * point_world[1]);
-
-  // auto dist_vertical = xyz[2];
-  // auto dist_horizonal = sqrt(xyz.squaredNorm() - dist_vertical * dist_vertical);
-  auto pitch = atan(dist_vertical / dist_horizonal) * 180.0 / PI;
-  // std::cout << "begin trajectory slove : " << std::endl;
-  // std::cout << "origin pitch : " << pitch << std::endl;  //此pitch应与相机坐标系算出的offset差不多
-  // std::cout << "dist_horizonal: " << dist_horizonal << std::endl;
-  // std::cout << "dist_vertical: " << dist_vertical << std::endl;
-  // std::cout << "point_world.squaredNorm(): " << point_world.squaredNorm() << std::endl;
-  // std::cout << "pitch: " << pitch << std::endl;
+  auto horizonal_dist = sqrt(point_world.squaredNorm() - h * h); // squaredNorm()表示向量的模的平方
+  auto pitch = atan(h / horizonal_dist) * 180.0 / M_PI;
   auto pitch_new = pitch;
-  //开始使用龙格库塔法求解弹道补偿
-  for (int i = 0; i < max_iter_; i++) { //迭代次数
-    //TODO:可以考虑将迭代起点改为世界坐标系下的枪口位置
-    //初始化
+
+  init_state_.clear();
+  init_state_.resize(4);
+  init_state_[0] = 0.0;
+  init_state_[1] = 0.0;
+  init_state_[2] = bullet_speed_;
+  init_state_[3] = pitch_new * M_PI / 180.0;
+
+  for (int i = 0; i < max_iter_; i++) {
+    // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Iteration %d", i);
     trajectory_.clear();
     trajectory_world_.clear();
-    auto x = 0.0;
-    auto y = 0.0;
-    auto p = tan(pitch_new / 180 * PI);  // p = dy / dx
-    auto v = bullet_speed_;
-    auto u = v / sqrt(1 + pow(p, 2));
-    auto delta_x = dist_horizonal / R_K_iter_;
-    for (int j = 0; j < R_K_iter_; j++) {
-      auto k1_u = -k * u * sqrt(1 + pow(p, 2));
-      auto k1_p = -g / pow(u, 2);
-      auto k1_u_sum = u + k1_u * (delta_x / 2);
-      auto k1_p_sum = p + k1_p * (delta_x / 2);
+    init_state_[3] = pitch_new * M_PI / 180.0;
+    // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "init_state: %f, %f, %f, %f", init_state_[0], init_state_[1], init_state_[2], init_state_[3]);
 
-      auto k2_u = -k * k1_u_sum * sqrt(1 + pow(k1_p_sum, 2));
-      auto k2_p = -g / pow(k1_u_sum, 2);
-      auto k2_u_sum = u + k2_u * (delta_x / 2);
-      auto k2_p_sum = p + k2_p * (delta_x / 2);
+    auto final_state = runge_kutta_->solve(
+      std::bind(&TrajectorySlover::func, this, std::placeholders::_1, std::placeholders::_2),
+      init_state_, 0.0, max_dist_ * 2.0 / bullet_speed_,
+      [horizonal_dist] (std::vector<double> y) {
+        return y[0] > horizonal_dist;
+      }
+    );
+    trajectory_ = runge_kutta_->get_track();
 
-      auto k3_u = -k * k2_u_sum * sqrt(1 + pow(k2_p_sum, 2));
-      auto k3_p = -g / pow(k2_u_sum, 2);
-      auto k3_u_sum = u + k3_u * (delta_x / 2);
-      auto k3_p_sum = p + k3_p * (delta_x / 2);
+    double x_1 = trajectory_[trajectory_.size() - 2].first;
+    double y_1 = trajectory_[trajectory_.size() - 2].second;
+    double x_2 = trajectory_[trajectory_.size() - 1].first;
+    double y_2 = trajectory_[trajectory_.size() - 1].second;
+    double k = (y_2 - y_1) / (x_2 - x_1);
+    double y = k * (horizonal_dist - x_1) + y_1;
 
-      auto k4_u = -k * k3_u_sum * sqrt(1 + pow(k3_p_sum, 2));
-      auto k4_p = -g / pow(k3_u_sum, 2);
 
-      u += (delta_x / 6) * (k1_u + 2 * k2_u + 2 * k3_u + k4_u);
-      p += (delta_x / 6) * (k1_p + 2 * k2_p + 2 * k3_p + k4_p);
+    auto error = h - y;
+    // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "h: %f, y: %f, error: %f", h, y, error);
 
-      x += delta_x;
-      y += p * delta_x;
-
-      trajectory_.emplace_back(std::make_pair(x, y));
-    }
-    //评估迭代结果,若小于迭代精度需求则停止迭代
-    auto error = dist_vertical - y;
     if (abs(error) <= stop_error_) {
+      // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Final state: %f, %f, %f, %f", final_state[0], final_state[1], final_state[2], final_state[3]);
+
       for (auto & point : trajectory_) {
         trajectory_world_.emplace_back(
           Eigen::Vector3d(
             point.first * cos(theta),
             point.first * sin(theta), point.second));
       }
+      flight_time_ = (trajectory_.size() - 2) * dt_ + (horizonal_dist - x_1) / (x_2 - x_1) * dt_;
       break;
     } else {
       vertical_tmp += error;
-      // xyz_tmp[1] -= error;
-      pitch_new = atan(vertical_tmp / dist_horizonal) * 180.0 / PI;
-      // std::cout << "iter_i: " << i << " error: " << error << " pitch_new: " << pitch_new
-      //           << std::endl;
+      pitch_new = atan(vertical_tmp / horizonal_dist) * 180.0 / M_PI;
     }
   }
-  // std::cout <<"offset:" << pitch_new-pitch << std::endl <<std::endl ;
-  // 最终输出的值为pitch轴的偏移量，即把枪管向上抬的角度
   return pitch_new - pitch;
 }
 

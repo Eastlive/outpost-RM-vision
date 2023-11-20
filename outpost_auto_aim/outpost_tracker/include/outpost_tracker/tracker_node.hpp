@@ -55,6 +55,11 @@ private:
   void publishMarkers(
     const auto_aim_interfaces::msg::TargetOutpost & target_msg,
     const std::vector<Eigen::Vector3d> & trajectory_msg);
+  
+  void publishTrajectory(
+    const auto_aim_interfaces::msg::TargetOutpost & target_msg,
+    const std::vector<Eigen::Vector3d> & trajectory_msg,
+    double now_time);
 
   void setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed);
 
@@ -93,6 +98,16 @@ private:
   visualization_msgs::msg::Marker armor_marker_;
   visualization_msgs::msg::Marker trajectory_marker_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+
+  // Visualization trajectory publisher
+  visualization_msgs::msg::Marker bullet_marker_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr trajectory_pub_;
+
+  bool is_fire_ = false;
+  double fire_time_;
+  std::vector<Eigen::Vector3d> now_trajectory_world_;
+  
+  double time_step;
 
   // outpost radius
   const double outpost_radius_ = 0.2765;

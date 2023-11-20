@@ -15,7 +15,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   tracker_debug_ = this->declare_parameter("debug", false);
 
   // Maximum allowable armor distance in the XOY plane
-  max_armor_distance_ = this->declare_parameter("max_armor_distance", 10.0);
+  max_armor_distance_ = this->declare_parameter("max_armor_distance", 15.0);
 
   // Tracker
   double max_match_distance = this->declare_parameter("tracker.max_match_distance", 0.15);
@@ -23,16 +23,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff);
   tracker_->tracking_thres = this->declare_parameter("tracker.tracking_thres", 5);
   lost_time_thres_ = this->declare_parameter("tracker.lost_time_thres", 0.3);
-
-  // EKF
-  // xa = x_armor, xc = x_robot_center
-  // state: xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r
-  // measurement: xa, ya, za, yaw
-  // f - Process function
-
-  ///////////////
-  /////改动1//////
-  ///////////////
 
   // outpost EKF
   // state: xc, yc, zc, yaw, v_yaw
@@ -84,21 +74,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
   auto u_q = [this]() {
       Eigen::MatrixXd q(5, 5);
-      // double t = dt_, x = s2qxyz_, y = s2qyaw_, r = s2qr_;
-      // double q_x_x = pow(t, 4) / 4 * x, q_x_vx = pow(t, 3) / 2 * x, q_vx_vx = pow(t, 2) * x;
-      // double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
-      // double q_r = pow(t, 4) / 4 * r;
-      // clang-format off
-      //    xc      v_xc    yc      v_yc    za      v_za    yaw     v_yaw   r
-      // q << q_x_x, q_x_vx, 0, 0, 0, 0, 0, 0, 0,
-      //   q_x_vx, q_vx_vx, 0, 0, 0, 0, 0, 0, 0,
-      //   0, 0, q_x_x, q_x_vx, 0, 0, 0, 0, 0,
-      //   0, 0, q_x_vx, q_vx_vx, 0, 0, 0, 0, 0,
-      //   0, 0, 0, 0, q_x_x, q_x_vx, 0, 0, 0,
-      //   0, 0, 0, 0, q_x_vx, q_vx_vx, 0, 0, 0,
-      //   0, 0, 0, 0, 0, 0, q_y_y, q_y_vy, 0,
-      //   0, 0, 0, 0, 0, 0, q_y_vy, q_vy_vy, 0,
-      //   0, 0, 0, 0, 0, 0, 0, 0, q_r;
+
       double t = dt_, x = s2qxyz_, y = s2qyaw_;
       double q_x_x = pow(t, 4) / 4 * x;
       double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
@@ -123,8 +99,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   Eigen::DiagonalMatrix<double, 5> p0;
   p0.setIdentity();
   tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
-
-  ///////////////
 
   // Subscriber with tf2 message_filter
   // tf2 relevant
@@ -178,11 +152,21 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   trajectory_marker_.color.r = 1.0;
   marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/tracker/marker", 10);
 
+  bullet_marker_.ns = "bullet";
+  bullet_marker_.type = visualization_msgs::msg::Marker::SPHERE;
+  bullet_marker_.scale.x = bullet_marker_.scale.y = bullet_marker_.scale.z = 0.1;
+  bullet_marker_.color.a = 1.0;
+  bullet_marker_.color.r = 1.0;
+  bullet_marker_.color.g = 1.0;
+  bullet_marker_.color.b = 1.0;
+  trajectory_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "/tracker/trajectory", 10);
+
   //trajectory slover param
   int max_iter = this->declare_parameter("trajectory.max_iter", 10);
-  float stop_error = this->declare_parameter("trajectory.stop_error", 0.001);
-  int R_K_iter = this->declare_parameter("trajectory.R_K_iter", 50);
-  double init_speed = this->declare_parameter("trajectory.init_bullet_speed", 26.5);
+  double stop_error = this->declare_parameter("trajectory.stop_error", 0.001);
+  time_step = this->declare_parameter("trajectory.time_step", 0.01);
+  double init_speed = this->declare_parameter("trajectory.init_bullet_speed", 26.1);
   bool is_hero = this->declare_parameter("trajectory.is_hero", false);
   static_offset_yaw_ = this->declare_parameter("trajectory.static_offset.yaw", 0.0);
   static_offset_pitch_ = this->declare_parameter("trajectory.static_offset.pitch", 0.0);
@@ -193,7 +177,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   fire_latency = this->declare_parameter("fire_latency", 0.02);
 
   trajectory_slover_ =
-    std::make_shared<TrajectorySlover>(max_iter, stop_error, R_K_iter, init_speed, is_hero);
+    std::make_shared<TrajectorySlover>(max_iter, stop_error, time_step, init_speed, max_armor_distance_);
 
   bullet_speed_sub_ = this->create_subscription<std_msgs::msg::Float64>(
     "/bullet_speed", 10,
@@ -205,7 +189,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
 
 void ArmorTrackerNode::setBulletSpeed(const std_msgs::msg::Float64::SharedPtr bulletspeed)
 {
-
   if (bulletspeed->data != 0) {
     auto diff = bulletspeed->data - trajectory_slover_->getBulletSpeed();
     if (diff > 0.2 || diff < -0.2) {
@@ -344,7 +327,8 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     armor_target_pitch_link(2) = armor_target_tf.vector.z;
 
     Eigen::Vector2d angel_diff = calcYawAndPitch(armor_target_pitch_link);
-    auto trajectory_pitch = (-trajectory_slover_->calcPitchCompensate(armor_target));
+    auto trajectory_pitch = (-trajectory_slover_->solvePitch(armor_target));
+    // RCLCPP_INFO(this->get_logger(), "armor_target: %f, %f, %f", armor_target(0), armor_target(1), armor_target(2));
     auto trajectory_view = trajectory_slover_->getTrajectoryWorld();
 
     target_msg.offset_yaw = rad2deg((double)angel_diff(0)) + static_offset_yaw_;
@@ -353,18 +337,32 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 
     double outpost_yaw = target_msg.yaw;
     double outpost_w = target_msg.v_yaw;
+    double flight_time = trajectory_slover_->getFlightTime();
     double pred_dt =
       fire_latency + latency_ / 1000 + (now_outpost_pos.norm() - outpost_radius_) /
       trajectory_slover_->getBulletSpeed();
+    RCLCPP_INFO(this->get_logger(), "pred_dt1: %f", pred_dt);
+    pred_dt = fire_latency + latency_ / 1000 + flight_time;
+    RCLCPP_INFO(this->get_logger(), "pred_dt2: %f", pred_dt);
     double pred_yaw = outpost_yaw + outpost_w * pred_dt;
 
     int8_t fire_permit = 0;
     double permit_yaw_angle = atan(1.35 / 2 / outpost_radius_);
-    double permit_scale = 0.6;
+    double permit_scale = 0.4;
     if (abs(pred_yaw - gimbal_yaw) < permit_yaw_angle * permit_scale) {
       fire_permit = 1;
     } else {
       fire_permit = 0;
+    }
+
+    if (fire_permit == 1) {
+      RCLCPP_INFO(this->get_logger(), "Fire permit!");
+      if (is_fire_ == false) {
+        RCLCPP_INFO(this->get_logger(), "Fire!");
+        is_fire_ = true;
+        fire_time_ = time.seconds();
+        now_trajectory_world_ = trajectory_slover_->getTrajectoryWorld();
+      }
     }
 
     target_msg.fire_permit = fire_permit;
@@ -374,6 +372,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     }
 
     publishMarkers(target_msg, trajectory_view);
+    publishTrajectory(target_msg, trajectory_view, time.seconds() - fire_time_);
   }
 }
 
@@ -447,6 +446,34 @@ void ArmorTrackerNode::publishMarkers(
   marker_array.markers.emplace_back(angular_v_marker_);
 
   marker_pub_->publish(marker_array);
+}
+
+void ArmorTrackerNode::publishTrajectory(
+  const auto_aim_interfaces::msg::TargetOutpost & target_msg,
+  const std::vector<Eigen::Vector3d> & trajectory_msg,
+  double now_time)
+{
+  int index = static_cast<int>(now_time / time_step);
+  if (index >= static_cast<int>(trajectory_msg.size())) {
+    is_fire_ = false;
+    return;
+  }
+
+  visualization_msgs::msg::MarkerArray marker_array;
+
+  if (is_fire_) {
+    bullet_marker_.header = target_msg.header;
+    bullet_marker_.action = visualization_msgs::msg::Marker::ADD;
+    bullet_marker_.pose.position.x = trajectory_msg[index][0];
+    bullet_marker_.pose.position.y = trajectory_msg[index][1];
+    bullet_marker_.pose.position.z = trajectory_msg[index][2];
+
+    marker_array.markers.emplace_back(bullet_marker_);
+  }
+  else{
+    bullet_marker_.action = visualization_msgs::msg::Marker::DELETE;
+  }
+  trajectory_pub_->publish(marker_array);
 }
 
 }  // namespace outpost_auto_aim

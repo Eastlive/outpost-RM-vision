@@ -57,8 +57,8 @@
     trajectory:
       max_iter : 10 
       stop_error : 0.001
-      R_K_iter : 50
-      init_bullet_speed : 16.0
+      time_step : 0.01
+      init_bullet_speed : 26.0
       is_hero: true
       static_offset:
         yaw : 0.0
