@@ -157,20 +157,20 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
     }
   }
 
-  switch (tracker_state) {
-    case DETECTING:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Detecting");
-      break;
-    case TRACKING:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Tracking");
-      break;
-    case TEMP_LOST:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Temp lost");
-      break;
-    case LOST:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Lost");
-      break;
-  }
+  // switch (tracker_state) {
+  //   case DETECTING:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Detecting");
+  //     break;
+  //   case TRACKING:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Tracking");
+  //     break;
+  //   case TEMP_LOST:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Temp lost");
+  //     break;
+  //   case LOST:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Lost");
+  //     break;
+  // }
 }
 
 void Tracker::initEKF(const Armor & a)
@@ -207,7 +207,7 @@ void Tracker::handleArmorJump(const Armor & current_armor)
   double yaw = orientationToYaw(current_armor.pose.orientation);
   target_state(3) = yaw;
   updateArmorsNum(current_armor);
-  RCLCPP_WARN(rclcpp::get_logger("outpost_tracker"), "Armor jump!");
+  // RCLCPP_WARN(rclcpp::get_logger("outpost_tracker"), "Armor jump!");
 
   // If position difference is larger than max_match_distance_,
   // take this case as the ekf diverged, reset the state

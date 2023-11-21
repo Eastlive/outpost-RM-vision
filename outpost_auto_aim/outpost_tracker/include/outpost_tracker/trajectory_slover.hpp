@@ -17,7 +17,9 @@ namespace outpost_auto_aim
 class TrajectorySlover
 {
 public:
-  TrajectorySlover(int max_iter, double stop_error, double dt, double bullet_speed, double max_dist);
+  TrajectorySlover(
+    int max_iter, double stop_error, double dt, double bullet_speed,
+    double max_dist);
   double solvePitch(Eigen::Vector3d & point_world);
 
   inline void setBulletSpeed(const double & speed) {bullet_speed_ = speed;}

@@ -13,9 +13,11 @@ VirtualSerialDriver::VirtualSerialDriver(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "Start virtual serial driver!");
 
   enemy_color_ = declare_parameter("enemy_color", 'R');
-  bullet_speed_ = declare_parameter("bullet_speed", 15.0);
+  bullet_speed_ = declare_parameter("bullet_speed", 16.0);
   pitch_joint_ = declare_parameter("pitch_joint", 0.0);
   yaw_joint_ = declare_parameter("yaw_joint", 0.0);
+
+  count_ = 0;
 
   RCLCPP_INFO(this->get_logger(), "enemy_color: %c", enemy_color_);
   RCLCPP_INFO(this->get_logger(), "bullet_speed: %f", bullet_speed_);
@@ -23,15 +25,19 @@ VirtualSerialDriver::VirtualSerialDriver(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(this->get_logger(), "yaw_joint: %f", yaw_joint_);
 
   enemy_color_pub_ = this->create_publisher<std_msgs::msg::Char>("/color", 10);
-
   bullet_speed_pub_ = this->create_publisher<std_msgs::msg::Float64>("/bullet_speed", 10);
-
   joint_state_pub_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
 
-  timer_ =
-    this->create_wall_timer(
-    std::chrono::milliseconds(30),
-    std::bind(&VirtualSerialDriver::timerCallback, this));
+  // RCLCPP_INFO(this->get_logger(), "Start target subscriber!");
+  // target_sub_ = this->create_subscription<auto_aim_interfaces::msg::TargetOutpost>(
+  //   "/tracker/target", rclcpp::SensorDataQoS(), [this](const auto_aim_interfaces::msg::TargetOutpost::SharedPtr msg) {
+  //     RCLCPP_INFO(this->get_logger(), "Get target message!");
+  //     target_msg_ = *msg;
+  //     RCLCPP_INFO(this->get_logger(), "offset_pitch: %f, offset_yaw: %f", target_msg_.offset_pitch, target_msg_.offset_yaw);
+  //   });
+
+  timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(30), std::bind(&VirtualSerialDriver::timerCallback, this));
 }
 
 void VirtualSerialDriver::timerCallback()
@@ -46,6 +52,12 @@ void VirtualSerialDriver::timerCallback()
   bullet_speed.data = bullet_speed_;
   bullet_speed_pub_->publish(bullet_speed);
 
+  // count_++;
+  // if (count_ > 10) {
+  //   count_ = 0;
+  //   pitch_joint_ += target_msg_.offset_pitch * M_PI / 180.0;
+  //   yaw_joint_ += target_msg_.offset_yaw * M_PI / 180.0;
+  // }
   sensor_msgs::msg::JointState joint_state;
   joint_state.header.stamp = this->now();
   joint_state.name.push_back("pitch_joint");

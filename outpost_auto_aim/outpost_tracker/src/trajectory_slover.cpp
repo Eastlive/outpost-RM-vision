@@ -7,8 +7,11 @@
 
 namespace outpost_auto_aim
 {
-TrajectorySlover::TrajectorySlover(int max_iter, double stop_error, double dt, double bullet_speed, double max_dist)
-  : max_iter_(max_iter), stop_error_(stop_error), dt_(dt), bullet_speed_(bullet_speed), max_dist_(max_dist)
+TrajectorySlover::TrajectorySlover(
+  int max_iter, double stop_error, double dt, double bullet_speed,
+  double max_dist)
+: max_iter_(max_iter), stop_error_(stop_error), dt_(dt), bullet_speed_(bullet_speed), max_dist_(
+    max_dist)
 {
   runge_kutta_ = std::make_shared<RungeKutta4>(dt_);
 }
@@ -26,7 +29,7 @@ std::vector<double> TrajectorySlover::func(double x, std::vector<double> y)
 
 double TrajectorySlover::solvePitch(Eigen::Vector3d & point_world)
 {
-  RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Solving pitch...");
+  // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Solving pitch...");
   // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "point_world: %f, %f, %f", point_world[0], point_world[1], point_world[2]);
 
   trajectory_.clear();
@@ -57,7 +60,7 @@ double TrajectorySlover::solvePitch(Eigen::Vector3d & point_world)
     auto final_state = runge_kutta_->solve(
       std::bind(&TrajectorySlover::func, this, std::placeholders::_1, std::placeholders::_2),
       init_state_, 0.0, max_dist_ * 2.0 / bullet_speed_,
-      [horizonal_dist] (std::vector<double> y) {
+      [horizonal_dist](std::vector<double> y) {
         return y[0] > horizonal_dist;
       }
     );

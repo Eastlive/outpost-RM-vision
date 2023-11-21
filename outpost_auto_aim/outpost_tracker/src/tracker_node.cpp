@@ -177,7 +177,9 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   fire_latency = this->declare_parameter("fire_latency", 0.02);
 
   trajectory_slover_ =
-    std::make_shared<TrajectorySlover>(max_iter, stop_error, time_step, init_speed, max_armor_distance_);
+    std::make_shared<TrajectorySlover>(
+    max_iter, stop_error, time_step, init_speed,
+    max_armor_distance_);
 
   bullet_speed_sub_ = this->create_subscription<std_msgs::msg::Float64>(
     "/bullet_speed", 10,
@@ -474,7 +476,7 @@ void ArmorTrackerNode::publishTrajectory(
   double now_time)
 {
   int index = static_cast<int>(now_time / time_step);
-  if(index < 0){return;}
+  if (index < 0) {return;}
 
   visualization_msgs::msg::MarkerArray marker_array;
 
@@ -490,8 +492,7 @@ void ArmorTrackerNode::publishTrajectory(
     bullet_marker_.pose.position.z = trajectory_msg[index][2];
 
     marker_array.markers.emplace_back(bullet_marker_);
-  }
-  else{
+  } else {
     bullet_marker_.action = visualization_msgs::msg::Marker::DELETE;
     marker_array.markers.emplace_back(bullet_marker_);
   }

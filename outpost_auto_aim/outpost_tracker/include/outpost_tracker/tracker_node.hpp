@@ -55,7 +55,7 @@ private:
   void publishMarkers(
     const auto_aim_interfaces::msg::TargetOutpost & target_msg,
     const std::vector<Eigen::Vector3d> & trajectory_msg);
-  
+
   void publishTrajectory(
     const auto_aim_interfaces::msg::TargetOutpost & target_msg,
     const std::vector<Eigen::Vector3d> & trajectory_msg,
@@ -106,7 +106,7 @@ private:
   bool is_fire_ = false;
   double fire_time_;
   std::vector<Eigen::Vector3d> now_trajectory_world_;
-  
+
   double time_step;
 
   // outpost radius
