@@ -352,8 +352,9 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     }
 
     int8_t fire_permit = 0;
-    double permit_yaw_angle = atan(1.35 / 2.0 / outpost_radius_ * 100) / 180 * M_PI;
-    double permit_scale = 0.9;
+    double permit_yaw_angle = atan(0.135 / 2.0 / outpost_radius_);
+    // RCLCPP_INFO(this->get_logger(), "permit_yaw_angle: %f", permit_yaw_angle / M_PI * 180);
+    double permit_scale = 0.4;
 
     double armor_1_yaw = pred_yaw - outpost_center_diff[0];
     double armor_2_yaw = pred_yaw - outpost_center_diff[0] - 2 * M_PI / 3;
@@ -372,6 +373,8 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     // RCLCPP_INFO(this->get_logger(), "armor_1_yaw: %f", armor_1_yaw);
     // RCLCPP_INFO(this->get_logger(), "armor_2_yaw: %f", armor_2_yaw);
     // RCLCPP_INFO(this->get_logger(), "armor_3_yaw: %f", armor_3_yaw);
+    // double min_yaw = std::min(std::min(abs(armor_1_yaw), abs(armor_2_yaw)), abs(armor_3_yaw));
+    // RCLCPP_INFO(this->get_logger(), "min_yaw: %f", min_yaw / M_PI * 180);
 
     fire_permit = (abs(armor_1_yaw) < permit_yaw_angle * permit_scale) ||
       (abs(armor_2_yaw) < permit_yaw_angle * permit_scale) ||
@@ -384,6 +387,12 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
         is_fire_ = true;
         fire_time_ = time.seconds();
         now_trajectory_world_ = trajectory_slover_->getTrajectoryWorld();
+      } else {
+        // RCLCPP_INFO(this->get_logger(), "time - fire_time_: %f", time.seconds() - fire_time_);
+        // RCLCPP_INFO(this->get_logger(), "flight_time: %f", flight_time);
+        if (time.seconds() - fire_time_ > flight_time + 1) { // 1s is a safe time
+          is_fire_ = false;
+        }
       }
     }
 
@@ -394,7 +403,9 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     }
 
     publishMarkers(target_msg, trajectory_view);
-    publishTrajectory(target_msg, trajectory_view, time.seconds() - fire_time_);
+    publishTrajectory(
+      target_msg, trajectory_view,
+      time.seconds() - fire_time_ - fire_latency - latency_ / 1000);
   }
 }
 

@@ -80,6 +80,8 @@ double TrajectorySlover::solvePitch(Eigen::Vector3d & point_world)
     if (abs(error) <= stop_error_) {
       // RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Final state: %f, %f, %f, %f", final_state[0], final_state[1], final_state[2], final_state[3]);
 
+      trajectory_[trajectory_.size() - 1].first = horizonal_dist;
+      trajectory_[trajectory_.size() - 1].second = h;
       for (auto & point : trajectory_) {
         trajectory_world_.emplace_back(
           Eigen::Vector3d(

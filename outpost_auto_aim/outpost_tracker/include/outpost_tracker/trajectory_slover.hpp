@@ -36,7 +36,7 @@ private:
   std::vector<Eigen::Vector3d> trajectory_world_;
 
   const double g = 9.80665;
-  const double k_d = 0.5 * 0.22 * 0.0445 * 6.0 / M_PI / pow(0.042, 3) * M_PI * pow(0.042, 2) / 4.0;
+  const double k_d = 0.5 * 0.22 * 1.225 * M_PI * pow(0.021, 2);
   const double k_l = 0.0;
 
   int max_iter_{0};
