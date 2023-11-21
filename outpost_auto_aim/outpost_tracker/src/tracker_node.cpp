@@ -338,22 +338,42 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     double outpost_yaw = target_msg.yaw;
     double outpost_w = target_msg.v_yaw;
     double flight_time = trajectory_slover_->getFlightTime();
-    double pred_dt =
-      fire_latency + latency_ / 1000 + (now_outpost_pos.norm() - outpost_radius_) /
-      trajectory_slover_->getBulletSpeed();
-    RCLCPP_INFO(this->get_logger(), "pred_dt1: %f", pred_dt);
-    pred_dt = fire_latency + latency_ / 1000 + flight_time;
-    RCLCPP_INFO(this->get_logger(), "pred_dt2: %f", pred_dt);
+    // double pred_dt =
+    //   fire_latency + latency_ / 1000 + (now_outpost_pos.norm() - outpost_radius_) /
+    //   trajectory_slover_->getBulletSpeed();
+    double pred_dt = fire_latency + latency_ / 1000 + flight_time;
     double pred_yaw = outpost_yaw + outpost_w * pred_dt;
+    if (pred_yaw > M_PI) {
+      pred_yaw -= 2 * M_PI;
+    } else if (pred_yaw < -M_PI) {
+      pred_yaw += 2 * M_PI;
+    }
 
     int8_t fire_permit = 0;
-    double permit_yaw_angle = atan(1.35 / 2 / outpost_radius_);
-    double permit_scale = 0.4;
-    if (abs(pred_yaw - gimbal_yaw) < permit_yaw_angle * permit_scale) {
-      fire_permit = 1;
-    } else {
-      fire_permit = 0;
+    double permit_yaw_angle = atan(1.35 / 2.0 / outpost_radius_ * 100) / 180 * M_PI;
+    double permit_scale = 0.9;
+
+    double armor_1_yaw = pred_yaw - outpost_center_diff[0];
+    double armor_2_yaw = pred_yaw - outpost_center_diff[0] - 2 * M_PI / 3;
+    if (armor_2_yaw > M_PI) {
+      armor_2_yaw -= 2 * M_PI;
+    } else if (armor_2_yaw < -M_PI) {
+      armor_2_yaw += 2 * M_PI;
     }
+    double armor_3_yaw = pred_yaw - outpost_center_diff[0] - 4 * M_PI / 3;
+    if (armor_3_yaw > M_PI) {
+      armor_3_yaw -= 2 * M_PI;
+    } else if (armor_3_yaw < -M_PI) {
+      armor_3_yaw += 2 * M_PI;
+    }
+
+    // RCLCPP_INFO(this->get_logger(), "armor_1_yaw: %f", armor_1_yaw);
+    // RCLCPP_INFO(this->get_logger(), "armor_2_yaw: %f", armor_2_yaw);
+    // RCLCPP_INFO(this->get_logger(), "armor_3_yaw: %f", armor_3_yaw);
+
+    fire_permit = (abs(armor_1_yaw) < permit_yaw_angle * permit_scale) ||
+      (abs(armor_2_yaw) < permit_yaw_angle * permit_scale) ||
+      (abs(armor_3_yaw) < permit_yaw_angle * permit_scale);
 
     if (fire_permit == 1) {
       RCLCPP_INFO(this->get_logger(), "Fire permit!");
@@ -454,14 +474,15 @@ void ArmorTrackerNode::publishTrajectory(
   double now_time)
 {
   int index = static_cast<int>(now_time / time_step);
-  if (index >= static_cast<int>(trajectory_msg.size())) {
-    is_fire_ = false;
-    return;
-  }
+  if(index < 0){return;}
 
   visualization_msgs::msg::MarkerArray marker_array;
 
   if (is_fire_) {
+    if (index >= static_cast<int>(trajectory_msg.size())) {
+      is_fire_ = false;
+      return;
+    }
     bullet_marker_.header = target_msg.header;
     bullet_marker_.action = visualization_msgs::msg::Marker::ADD;
     bullet_marker_.pose.position.x = trajectory_msg[index][0];
@@ -472,6 +493,7 @@ void ArmorTrackerNode::publishTrajectory(
   }
   else{
     bullet_marker_.action = visualization_msgs::msg::Marker::DELETE;
+    marker_array.markers.emplace_back(bullet_marker_);
   }
   trajectory_pub_->publish(marker_array);
 }

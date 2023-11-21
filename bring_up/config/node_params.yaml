@@ -7,7 +7,7 @@
 
 /virtual_outpost:
   ros__parameters:
-    outpost_x: 0.0
+    outpost_x: -1.0
     outpost_y: -1.0
     outpost_z: 5.5
     orientation_x: 0.56098552679693100
