@@ -141,7 +141,7 @@ void OutpostDetectorNode::timerCallback()
   armors_msg_.armors.clear();
 
   for (int i = 0; i < 3; i++) {
-    if (armor_msg_[i].pose.position.z < outpost_z_ - radius * sin(M_PI / 10)) {
+    if (armor_msg_[i].pose.position.z < outpost_z_ - radius * sin(M_PI / 3)) {
       armors_msg_.armors.emplace_back(armor_msg_[i]);
     }
   }
@@ -180,7 +180,7 @@ void OutpostDetectorNode::publishMarkers()
   for (int i = 0; i < 3; i++) {
     armor_marker_.id = i;
     armor_marker_.pose = armor_msg_[i].pose;
-    if (armor_msg_[i].pose.position.z < outpost_z_ - radius * sin(M_PI / 10)) {
+    if (armor_msg_[i].pose.position.z < outpost_z_ - radius * sin(M_PI / 3)) {
       armor_marker_.color.r = 1.0;
       armor_marker_.color.g = 0.0;
       armor_marker_.color.b = 0.0;
@@ -189,7 +189,7 @@ void OutpostDetectorNode::publishMarkers()
       armor_marker_.color.r = 0.0;
       armor_marker_.color.g = 1.0;
       armor_marker_.color.b = 0.0;
-      armor_marker_.color.a = 0.5;
+      armor_marker_.color.a = 0.0;
     }
     marker_array_.markers.emplace_back(armor_marker_);
   }

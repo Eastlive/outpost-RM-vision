@@ -49,7 +49,7 @@ void Tracker::init(const Armors::SharedPtr & armors_msg)
   tracked_id = tracked_armor.number;
   tracker_state = DETECTING;
 
-  updateArmorsNum(tracked_armor);
+  tracked_armors_num = ArmorsNum::OUTPOST_3;
 }
 
 void Tracker::update(const Armors::SharedPtr & armors_msg)
@@ -98,6 +98,8 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
       auto p = tracked_armor.pose.position;
       // Update EKF
       double measured_yaw = orientationToYaw(tracked_armor.pose.orientation);
+
+      
       measurement = Eigen::Vector4d(p.x, p.y, p.z, measured_yaw);
       target_state = ekf.update(measurement);
       RCLCPP_DEBUG(rclcpp::get_logger("outpost_tracker"), "EKF update");
@@ -119,13 +121,13 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
   //   target_state(8) = 0.4;
   //   ekf.setState(target_state);
   // }
-  // if (target_state(4) < -1.0) {
-  //   target_state(4) = -0.8 * M_PI;
-  //   ekf.setState(target_state);
-  // } else if (target_state(4) > 1.0) {
-  //   target_state(4) = 0.8 * M_PI;
-  //   ekf.setState(target_state);
-  // }
+  if (target_state(4) <= -0.8 * M_PI) {
+    target_state(4) = -0.8 * M_PI;
+    ekf.setState(target_state);
+  } else if (target_state(4) >= 0.8 * M_PI) {
+    target_state(4) = 0.8 * M_PI;
+    ekf.setState(target_state);
+  }
 
   // Tracking state machine
   if (tracker_state == DETECTING) {
@@ -191,22 +193,9 @@ void Tracker::initEKF(const Armor & a)
   ekf.setState(target_state);
 }
 
-void Tracker::updateArmorsNum(const Armor & armor)
-{
-  if (armor.type == "large" && (tracked_id == "3" || tracked_id == "4" || tracked_id == "5")) {
-    tracked_armors_num = ArmorsNum::BALANCE_2;
-  } else if (tracked_id == "outpost") {
-    tracked_armors_num = ArmorsNum::OUTPOST_3;
-  } else {
-    tracked_armors_num = ArmorsNum::NORMAL_4;
-  }
-}
-
 void Tracker::handleArmorJump(const Armor & current_armor)
 {
   double yaw = orientationToYaw(current_armor.pose.orientation);
-  target_state(3) = yaw;
-  updateArmorsNum(current_armor);
   // RCLCPP_WARN(rclcpp::get_logger("outpost_tracker"), "Armor jump!");
 
   // If position difference is larger than max_match_distance_,
@@ -220,7 +209,8 @@ void Tracker::handleArmorJump(const Armor & current_armor)
     target_state(0) = p.x + r * cos(yaw);  // xc
     target_state(1) = p.y + r * sin(yaw);  // yc
     target_state(2) = p.z;                 // za
-    target_state(4) = 0;               // v_yaw
+    target_state(3) = yaw;
+    // target_state(4) = 0;               // v_yaw
     RCLCPP_ERROR(rclcpp::get_logger("outpost_tracker"), "Reset State!");
   }
 

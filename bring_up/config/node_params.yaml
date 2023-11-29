@@ -7,7 +7,7 @@
 
 /virtual_outpost:
   ros__parameters:
-    outpost_x: -1.0
+    outpost_x: 0.0
     outpost_y: -1.0
     outpost_z: 5.5
     orientation_x: 0.56098552679693100
@@ -19,7 +19,7 @@
   ros__parameters:
     debug: true
 
-    binary_thres: 80
+    binary_thres: 50
 
     light.min_ratio: 0.1
     armor.min_light_ratio: 0.8
@@ -41,11 +41,10 @@
 
     ekf:
       sigma2_q_xyz: 0.05
-      sigma2_q_yaw: 5.0
-      sigma2_q_r: 80.0
+      sigma2_q_yaw: 0.5
 
       r_xyz_factor: 0.0004
-      r_yaw: 0.005
+      r_yaw: 0.5
 
     tracker:
       max_match_distance: 0.5

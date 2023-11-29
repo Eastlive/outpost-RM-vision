@@ -59,7 +59,7 @@ def generate_launch_description():
         composable_node_descriptions=[
             ComposableNode(
                 package='armor_detector',
-                plugin='outpost_auto_aim::ArmorDetectorNode',
+                plugin='rm_auto_aim::ArmorDetectorNode',
                 name='armor_detector',
                 parameters=[detector_params],
             ),            
