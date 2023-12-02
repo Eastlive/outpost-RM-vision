@@ -1,0 +1,7 @@
+string tracker_state
+geometry_msgs/Point detect_pos
+float64 detect_yaw
+float64 detect_v_yaw
+geometry_msgs/Point predict_pos
+float64 predict_yaw
+float64 predict_v_yaw

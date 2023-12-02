@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/DebugLights.msg"
   "msg/TargetOutpost.msg"
   "msg/TrackerInfo.msg"
+  "msg/DebugTrackerInfo.msg"
   DEPENDENCIES
     std_msgs
     geometry_msgs

@@ -4,6 +4,7 @@
 // STD
 #include <memory>
 #include <vector>
+#include <angles/angles.h>
 
 namespace outpost_auto_aim
 {
@@ -122,6 +123,21 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // Measurement publisher (for debug usage)
   info_pub_ = this->create_publisher<auto_aim_interfaces::msg::TrackerInfo>("/tracker/info", 10);
 
+  // // Debug publisher
+  // debug_msg_.tracker_state = "Empty";
+  // debug_msg_.detect_pos.x = 0;
+  // debug_msg_.detect_pos.y = 0;
+  // debug_msg_.detect_pos.z = 0;
+  // debug_msg_.detect_yaw = 0;
+  // debug_msg_.detect_v_yaw = 0;
+  // debug_msg_.predict_pos.x = 0;
+  // debug_msg_.predict_pos.y = 0;
+  // debug_msg_.predict_pos.z = 0;
+  // debug_msg_.predict_yaw = 0;
+  // debug_msg_.predict_v_yaw = 0;
+  // debug_pub_ = this->create_publisher<auto_aim_interfaces::msg::DebugTrackerInfo>(
+  //   "/tracker/debug", 10);
+
   // Publisher
   target_pub_ = this->create_publisher<auto_aim_interfaces::msg::TargetOutpost>(
     "/tracker/target", rclcpp::SensorDataQoS());
@@ -211,7 +227,17 @@ void ArmorTrackerNode::setLatancy(const std_msgs::msg::Float64::SharedPtr latenc
 
 void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_msg)
 {
-
+  debug_msg_.tracker_state = "armor_callback";
+  debug_msg_.detect_pos.x = 0;
+  debug_msg_.detect_pos.y = 0;
+  debug_msg_.detect_pos.z = 0;
+  debug_msg_.detect_yaw = 0;
+  debug_msg_.detect_v_yaw = 0;
+  debug_msg_.predict_pos.x = 0;
+  debug_msg_.predict_pos.y = 0;
+  debug_msg_.predict_pos.z = 0;
+  debug_msg_.predict_yaw = 0;
+  debug_msg_.predict_v_yaw = 0;
   // Print armors
   if (tracker_debug_) {
     RCLCPP_INFO(
@@ -261,6 +287,15 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
     RCLCPP_ERROR(get_logger(), "Error while transforming %s", ex.what());
     return;
   }
+
+  debug_msg_.tracker_state = "armor_filter";
+  debug_msg_.detect_pos.x = armors_msg->armors[0].pose.position.x;
+  debug_msg_.detect_pos.y = armors_msg->armors[0].pose.position.y;
+  debug_msg_.detect_pos.z = armors_msg->armors[0].pose.position.z;
+
+  //debug_msg_.detect_yaw = orientationToYaw(armors_msg->armors[0].pose.orientation);
+  debug_msg_.detect_v_yaw = 0;
+
   // Init message
   auto_aim_interfaces::msg::TrackerInfo info_msg;
   auto_aim_interfaces::msg::TargetOutpost target_msg; // output message
@@ -272,6 +307,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
   if (tracker_->tracker_state == Tracker::LOST) {
     tracker_->init(armors_msg);
     target_msg.tracking = false;
+    debug_msg_.tracker_state = "init";
   } else {
     dt_ = (time - last_time_).seconds();
     tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_);
@@ -288,6 +324,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
 
     if (tracker_->tracker_state == Tracker::DETECTING) {
       target_msg.tracking = false;
+      debug_msg_.tracker_state = "detecting";
     } else if (
       tracker_->tracker_state == Tracker::TRACKING ||
       tracker_->tracker_state == Tracker::TEMP_LOST)
@@ -301,6 +338,18 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       target_msg.position.z = state(2);
       target_msg.yaw = state(3);
       target_msg.v_yaw = state(4);
+
+      // Fill debug message
+      if (tracker_->tracker_state == Tracker::TRACKING) {
+        debug_msg_.tracker_state = "tracking";
+      } else {
+        debug_msg_.tracker_state = "temp_lost";
+      }
+      debug_msg_.predict_pos.x = state(0);
+      debug_msg_.predict_pos.y = state(1);
+      debug_msg_.predict_pos.z = state(2);
+      debug_msg_.predict_yaw = state(3);
+      debug_msg_.predict_v_yaw = state(4);
     }
   }
 
@@ -408,6 +457,8 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       target_msg, trajectory_view,
       time.seconds() - fire_time_ - fire_latency - latency_ / 1000);
   }
+
+  // debug_pub_->publish(debug_msg_);
 }
 
 void ArmorTrackerNode::publishMarkers(
@@ -509,6 +560,19 @@ void ArmorTrackerNode::publishTrajectory(
     marker_array.markers.emplace_back(bullet_marker_);
   }
   trajectory_pub_->publish(marker_array);
+}
+
+double ArmorTrackerNode::orientationToYaw(const geometry_msgs::msg::Quaternion & q)
+{
+  // Get armor yaw
+  tf2::Quaternion tf_q;
+  tf2::fromMsg(q, tf_q);
+  double roll, pitch, yaw;
+  tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
+  // Make yaw change continuous (-pi~pi to -inf~inf)
+  yaw = last_yaw_ + angles::shortest_angular_distance(last_yaw_, yaw);
+  last_yaw_ = yaw;
+  return yaw;
 }
 
 }  // namespace outpost_auto_aim

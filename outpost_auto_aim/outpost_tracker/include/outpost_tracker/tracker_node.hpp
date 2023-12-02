@@ -27,6 +27,7 @@
 #include "auto_aim_interfaces/msg/armors.hpp"
 #include "auto_aim_interfaces/msg/tracker_info.hpp"
 #include "auto_aim_interfaces/msg/target_outpost.hpp"
+#include "auto_aim_interfaces/msg/debug_tracker_info.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "outpost_tracker/trajectory_slover.hpp"
 namespace outpost_auto_aim
@@ -65,6 +66,8 @@ private:
 
   void setLatancy(const std_msgs::msg::Float64::SharedPtr latency);
 
+  double orientationToYaw(const geometry_msgs::msg::Quaternion & q);
+
   // Maximum allowable armor distance in the XOY plane
   double max_armor_distance_;
 
@@ -88,6 +91,10 @@ private:
 
   // Tracker info publisher
   rclcpp::Publisher<auto_aim_interfaces::msg::TrackerInfo>::SharedPtr info_pub_;
+
+  // Debug info publisher
+  auto_aim_interfaces::msg::DebugTrackerInfo debug_msg_;
+  rclcpp::Publisher<auto_aim_interfaces::msg::DebugTrackerInfo>::SharedPtr debug_pub_;
 
   // Publisher
   rclcpp::Publisher<auto_aim_interfaces::msg::TargetOutpost>::SharedPtr target_pub_;
@@ -133,6 +140,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr latency_sub_;
 
   bool tracker_debug_;
+  double last_yaw_;
 };
 
 }  // namespace outpost_auto_aim
