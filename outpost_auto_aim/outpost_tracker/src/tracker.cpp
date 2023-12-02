@@ -54,15 +54,19 @@ void Tracker::init(const Armors::SharedPtr & armors_msg)
 
 void Tracker::update(const Armors::SharedPtr & armors_msg)
 {
+  std::string debug_info = " EKF predict: ";
+
   // KF predict
+  RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "EKF predict: %f, %f, %f, %f, %f", target_state(0), target_state(1), target_state(2), target_state(3), target_state(4));
   Eigen::VectorXd ekf_prediction = ekf.predict();
-  RCLCPP_DEBUG(rclcpp::get_logger("outpost_tracker"), "EKF predict");
+  RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "AFT predict: %f, %f, %f, %f, %f", ekf_prediction(0), ekf_prediction(1), ekf_prediction(2), ekf_prediction(3), ekf_prediction(4));
 
   bool matched = false;
   // Use KF prediction as default target state if no matched armor is found
   target_state = ekf_prediction;
 
   if (!armors_msg->armors.empty()) {
+    debug_info += "Armors not empty, ";
     // Find the closest armor with the same id
     Armor same_id_armor;
     int same_id_armors_count = 0;
@@ -82,6 +86,7 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
           // Find the closest armor
           min_position_diff = position_diff;
           yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(3));
+          RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Yaw_diff: %f, Orientation: %f, Prediction: %f", yaw_diff, orientationToYaw(armor.pose.orientation), ekf_prediction(3));
           tracked_armor = armor;
         }
       }
@@ -93,24 +98,29 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
 
     // Check if the distance and yaw difference of closest armor are within the threshold
     if (min_position_diff < max_match_distance_ && yaw_diff < max_match_yaw_diff_) {
+      debug_info += "Matched armor,    ";
       // Matched armor found
       matched = true;
       auto p = tracked_armor.pose.position;
       // Update EKF
       double measured_yaw = orientationToYaw(tracked_armor.pose.orientation);
-
       
       measurement = Eigen::Vector4d(p.x, p.y, p.z, measured_yaw);
       target_state = ekf.update(measurement);
       RCLCPP_DEBUG(rclcpp::get_logger("outpost_tracker"), "EKF update");
     } else if (same_id_armors_count == 1 && yaw_diff > max_match_yaw_diff_) {
+      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Yaw_diff: %f, max_match_yaw_diff: %f", yaw_diff, max_match_yaw_diff_);
+      debug_info += "Armor jump,       ";
       // Matched armor not found, but there is only one armor with the same id
       // and yaw has jumped, take this case as the target is spinning and armor jumped
       handleArmorJump(same_id_armor);
     } else {
+      debug_info += "No matched armor, ";
       // No matched armor found
       RCLCPP_WARN(rclcpp::get_logger("outpost_tracker"), "No matched armor found!");
     }
+  } else {
+    debug_info += "Armors empty.     ";
   }
 
   // Prevent radius from spreading
@@ -159,20 +169,37 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
     }
   }
 
+  // switch (tracker_state) {
+  //   case DETECTING:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Detecting");
+  //     break;
+  //   case TRACKING:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Tracking");
+  //     break;
+  //   case TEMP_LOST:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Temp lost");
+  //     break;
+  //   case LOST:
+  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Lost");
+  //     break;
+  // }
+
   switch (tracker_state) {
     case DETECTING:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Detecting");
+      debug_info = "Detecting" + debug_info;
       break;
     case TRACKING:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Tracking");
+      debug_info = "Tracking " + debug_info;
       break;
     case TEMP_LOST:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Temp lost");
+      debug_info = "Temp lost" + debug_info;
       break;
     case LOST:
-      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Lost");
+      debug_info = "Lost     " + debug_info;
       break;
   }
+
+  RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), debug_info.c_str());
 }
 
 void Tracker::initEKF(const Armor & a)
@@ -196,6 +223,7 @@ void Tracker::initEKF(const Armor & a)
 void Tracker::handleArmorJump(const Armor & current_armor)
 {
   double yaw = orientationToYaw(current_armor.pose.orientation);
+  RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "ArmorJumpYaw: %f", yaw);
   // RCLCPP_WARN(rclcpp::get_logger("outpost_tracker"), "Armor jump!");
 
   // If position difference is larger than max_match_distance_,
@@ -225,8 +253,8 @@ double Tracker::orientationToYaw(const geometry_msgs::msg::Quaternion & q)
   double roll, pitch, yaw;
   tf2::Matrix3x3(tf_q).getRPY(roll, pitch, yaw);
   // Make yaw change continuous (-pi~pi to -inf~inf)
-  yaw = last_yaw_ + angles::shortest_angular_distance(last_yaw_, yaw);
-  last_yaw_ = yaw;
+  // yaw = last_yaw_ + angles::shortest_angular_distance(last_yaw_, yaw);
+  // last_yaw_ = yaw;
   return yaw;
 }
 

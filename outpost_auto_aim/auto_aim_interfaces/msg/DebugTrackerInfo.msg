@@ -1,7 +1,9 @@
 string tracker_state
+float64 tracker_state_num
 geometry_msgs/Point detect_pos
 float64 detect_yaw
 float64 detect_v_yaw
 geometry_msgs/Point predict_pos
 float64 predict_yaw
 float64 predict_v_yaw
+float64 armors_number

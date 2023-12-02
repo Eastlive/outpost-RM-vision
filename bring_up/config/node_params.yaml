@@ -48,11 +48,11 @@
       r_yaw: 0.05
 
     tracker:
-      max_match_distance: 0.5
+      max_match_distance: 0.2
       max_match_yaw_diff: 1.0
 
       tracking_thres: 2
-      lost_time_thres: 3.0
+      lost_time_thres: 2.0
 
     trajectory:
       max_iter : 10 

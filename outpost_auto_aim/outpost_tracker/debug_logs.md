@@ -34,3 +34,23 @@
 atan结果是弧度
 
 # 想想就不对劲，谁家装甲板1.35厘米
+
+# 2023.12.3
+Debug
+# 调试发现，tracker丢失装甲板信息
+# 进一步调试发现，tracker丢失装甲板信息是因为进入了Armor Jump模式
+# 进一步调试发现，Armor Jump模式是因为tracker的yaw角度预测量会超出pi
+- 尝试调整方案
+    - 1. 限制yaw角度预测量在-pi到pi之间
+    - 2. 在卡尔曼滤波方程中将yaw角度限制在-pi到pi之间
+    - 3. 调小temp_lost阈值，因为tracker进入Armor Jump模式的原因是temp_lost时间过长
+    - 4. 修改完成Armor Jump之后的逻辑，因为Armor Jump似乎只改变了state值，但是没有改变预测值
+- 哈哈哈我调通啦！！！
+- 我调了啥？
+- 我把max_match_distance_的值调小了
+    - 之前的值是0.5，我调成了0.1
+    - 因为Armor Jump模式中有一个判断条件是
+        - if (armor->distance > max_match_distance_) {
+            // 更新target_state
+        - }
+    因此，只要max_match_distance_设置合理，真正的装甲板跳变就会被修改
