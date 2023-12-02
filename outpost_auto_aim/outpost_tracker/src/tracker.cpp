@@ -159,20 +159,20 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)
     }
   }
 
-  // switch (tracker_state) {
-  //   case DETECTING:
-  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Detecting");
-  //     break;
-  //   case TRACKING:
-  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Tracking");
-  //     break;
-  //   case TEMP_LOST:
-  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Temp lost");
-  //     break;
-  //   case LOST:
-  //     RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Lost");
-  //     break;
-  // }
+  switch (tracker_state) {
+    case DETECTING:
+      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Detecting");
+      break;
+    case TRACKING:
+      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Tracking");
+      break;
+    case TEMP_LOST:
+      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Temp lost");
+      break;
+    case LOST:
+      RCLCPP_INFO(rclcpp::get_logger("outpost_tracker"), "Lost");
+      break;
+  }
 }
 
 void Tracker::initEKF(const Armor & a)

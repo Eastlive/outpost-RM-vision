@@ -42,16 +42,17 @@
     ekf:
       sigma2_q_xyz: 0.05
       sigma2_q_yaw: 0.5
+      sigma2_q_v_yaw: 1.0
 
       r_xyz_factor: 0.0004
-      r_yaw: 0.5
+      r_yaw: 0.05
 
     tracker:
       max_match_distance: 0.5
       max_match_yaw_diff: 1.0
 
-      tracking_thres: 5
-      lost_time_thres: 4.0
+      tracking_thres: 2
+      lost_time_thres: 3.0
 
     trajectory:
       max_iter : 10 

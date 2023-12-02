@@ -71,18 +71,19 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // update_Q - process noise covariance matrix
   s2qxyz_ = declare_parameter("ekf.sigma2_q_xyz", 20.0);
   s2qyaw_ = declare_parameter("ekf.sigma2_q_yaw", 100.0);
-  s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
+  s2qvyaw_ = declare_parameter("ekf.sigma2_q_v_yaw", 800.0);
   auto u_q = [this]() {
       Eigen::MatrixXd q(5, 5);
 
-      double t = dt_, x = s2qxyz_, y = s2qyaw_;
+      double t = dt_, x = s2qxyz_, y = s2qyaw_, z = s2qvyaw_;
       double q_x_x = pow(t, 4) / 4 * x;
-      double q_y_y = pow(t, 4) / 4 * y, q_y_vy = pow(t, 3) / 2 * x, q_vy_vy = pow(t, 2) * y;
+      double q_y_y = pow(t, 4) / 4 * y;
+      double q_vy_vy = pow(t, 2) * z;
       q << q_x_x, 0, 0, 0, 0,
         0, q_x_x, 0, 0, 0,
         0, 0, q_x_x, 0, 0,
-        0, 0, 0, q_y_y, q_y_vy,
-        0, 0, 0, q_y_vy, q_vy_vy;
+        0, 0, 0, q_y_y, 0,
+        0, 0, 0, 0, q_vy_vy;
       // clang-format on
       return q;
     };

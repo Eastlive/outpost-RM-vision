@@ -41,7 +41,7 @@ private:
   void createDebugPublishers();
   void destroyDebugPublishers();
 
-  void publishMarkers();
+  void publishMarkers(auto_aim_interfaces::msg::Armors armors_msg);
 
   // Armor Detector
   std::unique_ptr<Detector> detector_;

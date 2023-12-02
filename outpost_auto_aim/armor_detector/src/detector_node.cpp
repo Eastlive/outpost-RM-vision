@@ -112,16 +112,14 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions & options)
       std::bind(&ArmorDetectorNode::imageCallback, this, std::placeholders::_1));
   }
 }
+
 void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg)
 {
   auto armors = detectArmors(img_msg);
 
   if (pnp_solver_ != nullptr) {
-    armors_msg_.header = armor_marker_.header = text_marker_.header = img_msg->header;
+    armors_msg_.header = img_msg->header;
     armors_msg_.armors.clear();
-    marker_array_.markers.clear();
-    armor_marker_.id = 0;
-    text_marker_.id = 0;
 
     auto_aim_interfaces::msg::Armor armor_msg;
     for (const auto & armor : armors) {
@@ -153,17 +151,7 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
         // Fill the distance to image center
         armor_msg.distance_to_image_center = pnp_solver_->calculateDistanceToCenter(armor.center);
 
-        // Fill the markers
-        armor_marker_.id++;
-        armor_marker_.scale.y = armor.type == ArmorType::SMALL ? 0.135 : 0.23;
-        armor_marker_.pose = armor_msg.pose;
-        text_marker_.id++;
-        text_marker_.pose.position = armor_msg.pose.position;
-        text_marker_.pose.position.y -= 0.1;
-        text_marker_.text = armor.classfication_result;
         armors_msg_.armors.emplace_back(armor_msg);
-        marker_array_.markers.emplace_back(armor_marker_);
-        marker_array_.markers.emplace_back(text_marker_);
       } else {
         RCLCPP_WARN(this->get_logger(), "PnP failed!");
       }
@@ -173,7 +161,7 @@ void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image::ConstShared
     armors_pub_->publish(armors_msg_);
 
     // Publishing marker
-    publishMarkers();
+    publishMarkers(armors_msg_);
   }
 }
 
@@ -295,11 +283,40 @@ void ArmorDetectorNode::destroyDebugPublishers()
   result_img_pub_.shutdown();
 }
 
-void ArmorDetectorNode::publishMarkers()
+void ArmorDetectorNode::publishMarkers(auto_aim_interfaces::msg::Armors armors_msg)
 {
-  using Marker = visualization_msgs::msg::Marker;
-  armor_marker_.action = armors_msg_.armors.empty() ? Marker::DELETE : Marker::ADD;
-  marker_array_.markers.emplace_back(armor_marker_);
+  armor_marker_.header.frame_id = armors_msg_.header.frame_id;
+  armor_marker_.header.stamp = this->now();
+  text_marker_.header.frame_id = armors_msg_.header.frame_id;
+  text_marker_.header.stamp = this->now();
+  marker_array_.markers.clear();
+  armor_marker_.id = 0;
+  text_marker_.id = 0;
+
+  if(!armors_msg_.armors.empty()){
+    armor_marker_.action = visualization_msgs::msg::Marker::ADD;
+    text_marker_.action = visualization_msgs::msg::Marker::ADD;
+
+    for (const auto & armor : armors_msg.armors) {
+      // Fill the markers
+      armor_marker_.id++;
+      armor_marker_.scale.y = armor.type == "small" ? 0.135 : 0.23;
+      armor_marker_.pose = armor.pose;
+      marker_array_.markers.emplace_back(armor_marker_);
+
+      text_marker_.id++;
+      text_marker_.pose.position = armor.pose.position;
+      text_marker_.pose.position.y -= 0.1;
+      text_marker_.text = armor.number;
+      marker_array_.markers.emplace_back(text_marker_);
+    }
+  } else {
+    armor_marker_.action = visualization_msgs::msg::Marker::DELETE;
+    text_marker_.action = visualization_msgs::msg::Marker::DELETE;
+    marker_array_.markers.emplace_back(armor_marker_);
+    marker_array_.markers.emplace_back(text_marker_);
+  }
+
   marker_pub_->publish(marker_array_);
 }
 
